@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -57,9 +58,9 @@ func Validate(secret []byte, code string, t time.Time, skew int) bool {
 
 // URI returns an otpauth:// URL for enrolling secret in an authenticator app.
 func URI(secret []byte, issuer, account string) string {
-	label := url.PathEscape(account)
+	label := escapeLabel(account)
 	if issuer != "" {
-		label = url.PathEscape(issuer) + ":" + label
+		label = escapeLabel(issuer) + ":" + label
 	}
 	q := url.Values{}
 	q.Set("secret", base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(secret))
@@ -70,6 +71,12 @@ func URI(secret []byte, issuer, account string) string {
 	q.Set("digits", "6")
 	q.Set("period", strconv.Itoa(period))
 	return "otpauth://totp/" + label + "?" + q.Encode()
+}
+
+// escapeLabel escapes one component of the "issuer:account" label. PathEscape
+// leaves ':' intact, which would make the label ambiguous, so escape it too.
+func escapeLabel(s string) string {
+	return strings.ReplaceAll(url.PathEscape(s), ":", "%3A")
 }
 
 func generate(secret []byte, counter int64) string {
