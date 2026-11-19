@@ -11,3 +11,6 @@ A set of common reusable packages.
 - [email](./email) MJML and plain-text email template rendering.
 - [assert](./assert) invariant checks for production code.
 - [oauth](./oauth) OAuth2/OIDC logins with PKCE and nonce by default.
+- [retry](./retry) bounded retries with exponential backoff and jitter.
+- [log](./log) slog defaults and request-scoped loggers.
+- [validate](./validate) field-keyed validation for user input.
