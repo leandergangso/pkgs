@@ -48,6 +48,6 @@ defer resp.Body.Close()
 ## JSON behavior
 
 `encoding/json/v2` uses stricter defaults than `encoding/json`: duplicate
-object names, invalid UTF-8, and case-insensitive field matching are rejected
-unless JSON options are used. `httpreq` does not expose those options, so it is
-best for APIs that follow normal JSON conventions.
+object names and invalid UTF-8 are rejected, and struct field names are matched
+case-sensitively. v2 options can restore the older behavior, but `httpreq` does
+not expose them, so it is best for APIs that follow normal JSON conventions.

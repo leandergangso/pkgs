@@ -7,6 +7,16 @@ Handlers return an error, and middleware is standard
 
 Requires Go 1.22+.
 
+## Design
+
+- Routing is always `http.ServeMux`: patterns, precedence, wildcards, redirects,
+  404s, and 405s remain standard library behavior.
+- `Router` is an `http.Handler`; serve it directly with `http.ListenAndServe`.
+- Handlers return errors, and one global error handler turns them into responses.
+- Middleware is standard `func(http.Handler) http.Handler`, captured at route
+  registration time.
+- The additions are limited to `Group`, `Use`, and `Mount`.
+
 ## Usage
 
 ```go
@@ -34,8 +44,7 @@ log.Fatal(http.ListenAndServe(":8080", mux))
 `Handle` and `HandleFunc` accept error-returning handlers; a custom handler type
 can implement `errmux.Handler`. Standard `http.Handler` values use `HandleHTTP`.
 
-Middleware added to the router before `Group` is inherited by that group. A
-`Group` is not an `http.Handler`; serve the root `Router`. Group patterns are
+A `Group` is not an `http.Handler`; serve the root `Router`. Group patterns are
 paths with an optional method and one space (`"GET /orders"`). Host patterns
 belong on the root `Router`.
 
@@ -48,6 +57,10 @@ mux.SetErrorHandler(func(w http.ResponseWriter, r *http.Request, err error) {
 	http.Error(w, err.Error(), http.StatusInternalServerError)
 })
 ```
+
+`SetErrorHandler` is global and live: it applies to all routes, including those
+registered earlier. Unlike middleware, it is resolved when an error occurs. Call
+it during setup.
 
 `SetErrorHandler(nil)` restores the default. Do not write a response before
 returning an error.

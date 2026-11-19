@@ -122,6 +122,7 @@ type Error struct {
 	Body       []byte
 }
 
+// Error implements [error].
 func (e *Error) Error() string {
 	return "httpreq: " + e.Status
 }

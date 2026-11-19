@@ -1,3 +1,4 @@
+// Package errmux provides an error-returning router built on [net/http.ServeMux].
 package errmux
 
 import (
@@ -37,7 +38,8 @@ func DefaultErrorHandler(w http.ResponseWriter, _ *http.Request, _ error) {
 // Router is an [http.Handler] that routes requests with an embedded
 // [http.ServeMux]. The zero value is ready to use.
 //
-// A Router must not be copied after first use.
+// Configure and register routes before serving requests. A Router must not be
+// copied after first use.
 type Router struct {
 	mux        http.ServeMux
 	middleware []Middleware
@@ -54,9 +56,11 @@ func (m *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m.mux.ServeHTTP(w, r)
 }
 
-// Use appends middleware to the router. Middleware added before registering a
-// route or group applies to it.
+// Use appends middleware to the router. The middleware applies to routes and
+// groups registered after this call. Routes and groups registered earlier keep
+// the middleware stack they had at registration time. Passing nil panics.
 func (m *Router) Use(middleware ...Middleware) {
+	checkMiddleware(middleware)
 	m.middleware = append(m.middleware, middleware...)
 }
 
@@ -107,6 +111,21 @@ func (m *Router) HandleHTTP(pattern string, handler http.Handler) {
 		panic("errmux: nil handler")
 	}
 	m.mux.Handle(joinPattern("", pattern), chain(handler, m.middleware))
+}
+
+// Mount attaches handler under a path prefix, such as "/api". The mounted
+// handler receives request paths with prefix removed. Middleware registered
+// before Mount applies to it.
+//
+// A mounted handler is an [http.Handler] boundary. Errors returned by handlers
+// inside a mounted [Router] are handled by that router's error handler, not by
+// the parent router.
+func (m *Router) Mount(prefix string, handler http.Handler) {
+	if handler == nil {
+		panic("errmux: nil handler")
+	}
+	pattern, strip := mountPattern(joinPath("", prefix))
+	m.mux.Handle(pattern, chain(stripPrefix(strip, handler), m.middleware))
 }
 
 // Get registers handler for GET requests matching pattern.
@@ -161,9 +180,11 @@ type Group struct {
 	middleware []Middleware
 }
 
-// Use appends middleware to the group. Middleware added before registering a
-// route or nested group applies to it.
+// Use appends middleware to the group. The middleware applies to routes and
+// nested groups registered after this call within this group. Passing nil
+// panics.
 func (g *Group) Use(middleware ...Middleware) {
+	checkMiddleware(middleware)
 	g.middleware = append(g.middleware, middleware...)
 }
 
@@ -268,6 +289,29 @@ func chain(handler http.Handler, middleware []Middleware) http.Handler {
 		handler = middleware[i](handler)
 	}
 	return handler
+}
+
+func checkMiddleware(middleware []Middleware) {
+	for _, mw := range middleware {
+		if mw == nil {
+			panic("errmux: nil middleware")
+		}
+	}
+}
+
+func stripPrefix(prefix string, handler http.Handler) http.Handler {
+	if prefix == "" {
+		return handler
+	}
+	return http.StripPrefix(prefix, handler)
+}
+
+func mountPattern(prefix string) (pattern, strip string) {
+	prefix = strings.Trim(joinPath("", prefix), "/")
+	if prefix == "" {
+		return "/", ""
+	}
+	return "/" + prefix + "/", "/" + prefix
 }
 
 // joinPattern prefixes a group pattern. Group patterns are paths with an
