@@ -3,8 +3,6 @@
 Small, dependency-free helpers for generating and protecting secret values. The
 caller owns all keys and storage; nothing is kept between calls.
 
-Requires Go 1.22+.
-
 ```go
 key := secret.NewKey()
 

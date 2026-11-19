@@ -5,8 +5,6 @@ matching, redirects, 404s, and 405s are handled by the standard library.
 Handlers return an error, and middleware is standard
 `func(http.Handler) http.Handler`.
 
-Requires Go 1.22+.
-
 ## Design
 
 - Routing is always `http.ServeMux`: patterns, precedence, wildcards, redirects,

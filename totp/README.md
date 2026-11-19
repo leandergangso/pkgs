@@ -1,8 +1,7 @@
 # totp
 
 RFC 6238 time-based one-time passwords with the interoperable defaults used by
-authenticator apps: SHA-1, a 30-second period, and six digits. Requires Go
-1.22+.
+authenticator apps: SHA-1, a 30-second period, and six digits.
 
 ```go
 secret := totp.NewSecret() // store this per user, encrypted

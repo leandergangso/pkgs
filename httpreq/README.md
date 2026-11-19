@@ -1,7 +1,6 @@
 # httpreq
 
-Small helpers for common HTTP API requests. Requires Go 1.27+ because it uses
-`encoding/json/v2`.
+Small helpers for common HTTP API requests, built on `encoding/json/v2`.
 
 ```go
 user, err := httpreq.Do[User](ctx, http.MethodGet, "https://api.example.com/users/1")

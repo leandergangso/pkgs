@@ -1,7 +1,7 @@
 # oauth
 
 A thin, opinionated layer over `golang.org/x/oauth2` and
-`github.com/coreos/go-oidc/v3/oidc`. Requires Go 1.24.4+.
+`github.com/coreos/go-oidc/v3/oidc`.
 
 Every flow uses the authorization code grant with PKCE. OIDC providers also get
 a nonce. There is no implicit flow, and the package stores nothing: you keep the

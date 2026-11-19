@@ -2,7 +2,7 @@
 
 Checks programming invariants in production code. A failed assertion panics
 with `*assert.Violation`, which includes the call site and can be matched with
-`errors.As`. Requires Go 1.22+.
+`errors.As`.
 
 ```go
 func New(opts Options) (*Server, error) {
