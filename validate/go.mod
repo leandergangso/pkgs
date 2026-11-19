@@ -1,3 +1,3 @@
-module github.com/leander/pkgs/validate
+module github.com/leandergangso/pkgs/validate
 
 go 1.22

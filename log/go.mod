@@ -1,3 +1,3 @@
-module github.com/leander/pkgs/log
+module github.com/leandergangso/pkgs/log
 
 go 1.22

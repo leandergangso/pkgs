@@ -1,4 +1,4 @@
-module github.com/leander/pkgs/email
+module github.com/leandergangso/pkgs/email
 
 go 1.24.4
 

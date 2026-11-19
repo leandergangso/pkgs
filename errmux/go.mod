@@ -1,3 +1,3 @@
-module github.com/leander/pkgs/errmux
+module github.com/leandergangso/pkgs/errmux
 
 go 1.22

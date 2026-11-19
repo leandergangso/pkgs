@@ -1,3 +1,3 @@
-module github.com/leander/pkgs/totp
+module github.com/leandergangso/pkgs/totp
 
 go 1.22

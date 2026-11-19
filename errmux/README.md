@@ -22,7 +22,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/leander/pkgs/errmux"
+	"github.com/leandergangso/pkgs/errmux"
 )
 
 mux := errmux.New()

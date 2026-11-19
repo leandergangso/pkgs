@@ -1,3 +1,3 @@
-module github.com/leander/pkgs/httpreq
+module github.com/leandergangso/pkgs/httpreq
 
 go 1.27

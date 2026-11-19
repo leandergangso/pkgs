@@ -1,4 +1,4 @@
-module github.com/leander/pkgs/oauth
+module github.com/leandergangso/pkgs/oauth
 
 go 1.26.0
 
