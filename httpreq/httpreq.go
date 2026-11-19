@@ -1,11 +1,12 @@
-// Package reqx provides small helpers for common HTTP API requests.
-package reqx
+// Package httpreq provides small helpers for common HTTP API requests.
+//
+// JSON is handled by [encoding/json/v2], which requires Go 1.27 or newer.
+package httpreq
 
 import (
 	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
+	json "encoding/json/v2"
 	"io"
 	"net/http"
 	"net/url"
@@ -56,7 +57,8 @@ func WithRequest(fn func(*http.Request) error) Option {
 
 // Do sends body as JSON and decodes the JSON response into T.
 //
-// A non-2xx response returns an [*Error].
+// A non-2xx response returns an [*Error]. An empty response body returns the
+// zero value of T.
 func Do[T any](ctx context.Context, method, rawURL string, body any, opts ...Option) (T, error) {
 	var zero T
 
@@ -92,11 +94,16 @@ func Do[T any](ctx context.Context, method, rawURL string, body any, opts ...Opt
 		return zero, nil
 	}
 
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return zero, err
+	}
+	if len(bytes.TrimSpace(data)) == 0 {
+		return zero, nil
+	}
+
 	var out T
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		if errors.Is(err, io.EOF) {
-			return zero, nil
-		}
+	if err := json.Unmarshal(data, &out); err != nil {
 		return zero, err
 	}
 	return out, nil
@@ -116,7 +123,7 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	return "reqx: " + e.Status
+	return "httpreq: " + e.Status
 }
 
 func newConfig(opts []Option) *config {
