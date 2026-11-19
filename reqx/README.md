@@ -1,45 +1,44 @@
 # reqx
 
-Small helpers for sending HTTP requests with `net/http`.
-
-`reqx` does not hide `http.Request` or `http.Response`. Use `NewRequest` and `Do`
-when you need full control.
-
-## Usage
+Small helpers for common HTTP API requests.
 
 ```go
-client := &reqx.Client{
-	BaseURL: "https://api.example.com",
-	Header: http.Header{
-		"Authorization": {"Bearer " + token},
-	},
-	HTTP: &http.Client{Timeout: 10 * time.Second},
-}
+user, err := reqx.Do[User](ctx, http.MethodGet, "https://api.example.com/users/1")
 
-resp, err := client.Get(ctx, "/users/1")
-if err != nil {
-	return err
-}
+created, err := reqx.Do[User](ctx, http.MethodPost, "https://api.example.com/users", input)
 
-var user User
-if err := reqx.DecodeJSON(resp, &user); err != nil {
-	return err
-}
-
-resp, err = client.PostJSON(ctx, "/users", user)
+data, err := reqx.Do[map[string]any](ctx, http.MethodGet, "https://api.example.com/stats")
 ```
 
-`Get` and `Post` return a raw response, so close its body when you are done.
-`DecodeJSON` and `ReadAll` close it for you.
+`Do` encodes the body as JSON and decodes the JSON response into the requested
+type. Use `http.Method*` for the method.
 
-## Full control
+## Options
 
 ```go
-req, err := client.NewRequest(ctx, http.MethodPut, "/users/1", body)
+user, err := reqx.Do[User](ctx, http.MethodGet, url,
+	reqx.WithClient(client),
+	reqx.WithHeader("Authorization", "Bearer "+token),
+	reqx.WithQuery("page", "2"),
+)
+```
+
+`WithRequest` applies a function to the `*http.Request` before it is sent:
+
+```go
+reqx.WithRequest(func(req *http.Request) error {
+	req.SetBasicAuth(user, pass)
+	return nil
+})
+```
+
+Non-2xx responses return `*reqx.Error`, which includes the status code, status
+text, and body. For a raw response, use `Send`:
+
+```go
+resp, err := reqx.Send(ctx, http.MethodGet, url, nil)
 if err != nil {
 	return err
 }
-req.Header.Set("If-Match", etag)
-
-resp, err := client.Do(req)
+defer resp.Body.Close()
 ```
