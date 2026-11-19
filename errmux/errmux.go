@@ -5,12 +5,25 @@ import (
 	"strings"
 )
 
-var _ http.Handler = (*Router)(nil)
+var (
+	_ http.Handler = (*Router)(nil)
+	_ Handler      = HandlerFunc(nil)
+)
 
-// HandlerFunc is an [http.HandlerFunc] that returns an error.
+// Handler handles an HTTP request and returns an error.
+type Handler interface {
+	ServeHTTP(w http.ResponseWriter, r *http.Request) error
+}
+
+// HandlerFunc is a function that implements [Handler].
 type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
 
-// ErrorHandler handles an error returned by a [HandlerFunc].
+// ServeHTTP implements [Handler].
+func (h HandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
+	return h(w, r)
+}
+
+// ErrorHandler handles an error returned by a [Handler].
 type ErrorHandler func(w http.ResponseWriter, r *http.Request, err error)
 
 // Middleware wraps an [http.Handler].
@@ -41,26 +54,26 @@ func (m *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m.mux.ServeHTTP(w, r)
 }
 
-// Use appends middleware to the mux. Middleware added before registering a
+// Use appends middleware to the router. Middleware added before registering a
 // route or group applies to it.
 func (m *Router) Use(middleware ...Middleware) {
 	m.middleware = append(m.middleware, middleware...)
 }
 
-// SetErrorHandler sets the error handler for the mux. Passing nil restores
+// SetErrorHandler sets the error handler for the router. Passing nil restores
 // [DefaultErrorHandler].
 func (m *Router) SetErrorHandler(handler ErrorHandler) {
 	m.errHandler = handler
 }
 
 // Group registers routes under prefix. The callback receives a registration
-// scope that uses the root mux and inherits its current middleware.
+// scope that uses the root router and inherits its current middleware.
 //
 // Group patterns are paths, optionally prefixed with a method and one space,
 // such as "GET /users". Host-specific patterns belong on the root Router.
 func (m *Router) Group(prefix string, fn func(g *Group)) {
 	if fn == nil {
-		panic("servemux: nil group function")
+		panic("errmux: nil group function")
 	}
 	fn(&Group{
 		mux:        m,
@@ -69,25 +82,31 @@ func (m *Router) Group(prefix string, fn func(g *Group)) {
 	})
 }
 
-// Handle registers an [http.Handler] for pattern using
+// Handle registers an error-returning [Handler] for pattern using
 // [http.ServeMux.Handle]'s pattern syntax.
-func (m *Router) Handle(pattern string, handler http.Handler) {
+func (m *Router) Handle(pattern string, handler Handler) {
 	if handler == nil {
-		panic("servemux: nil handler")
+		panic("errmux: nil handler")
 	}
-	m.mux.Handle(joinPattern("", pattern), chain(handler, m.middleware))
+	m.mux.Handle(joinPattern("", pattern), chain(wrap(m, handler), m.middleware))
 }
 
 // HandleFunc registers an error-returning handler for pattern using
 // [http.ServeMux.HandleFunc]'s pattern syntax.
-//
-// A standard func(http.ResponseWriter, *http.Request) can be registered with
-// [Router.Handle] and [http.HandlerFunc].
 func (m *Router) HandleFunc(pattern string, handler HandlerFunc) {
 	if handler == nil {
-		panic("servemux: nil handler")
+		panic("errmux: nil handler")
 	}
-	m.mux.Handle(joinPattern("", pattern), chain(wrap(m, handler), m.middleware))
+	m.Handle(pattern, handler)
+}
+
+// HandleHTTP registers a standard [http.Handler] for pattern using
+// [http.ServeMux.Handle]'s pattern syntax.
+func (m *Router) HandleHTTP(pattern string, handler http.Handler) {
+	if handler == nil {
+		panic("errmux: nil handler")
+	}
+	m.mux.Handle(joinPattern("", pattern), chain(handler, m.middleware))
 }
 
 // Get registers handler for GET requests matching pattern.
@@ -149,9 +168,9 @@ func (g *Group) Use(middleware ...Middleware) {
 }
 
 // Group registers nested routes under prefix.
-func (g *Group) Group(prefix string, fn func(*Group)) {
+func (g *Group) Group(prefix string, fn func(g *Group)) {
 	if fn == nil {
-		panic("servemux: nil group function")
+		panic("errmux: nil group function")
 	}
 	fn(&Group{
 		mux:        g.mux,
@@ -160,20 +179,28 @@ func (g *Group) Group(prefix string, fn func(*Group)) {
 	})
 }
 
-// Handle registers an [http.Handler] for a group path pattern.
-func (g *Group) Handle(pattern string, handler http.Handler) {
+// Handle registers an error-returning [Handler] for a group path pattern.
+func (g *Group) Handle(pattern string, handler Handler) {
 	if handler == nil {
-		panic("servemux: nil handler")
+		panic("errmux: nil handler")
 	}
-	g.mux.mux.Handle(joinPattern(g.prefix, pattern), chain(handler, g.middleware))
+	g.mux.mux.Handle(joinPattern(g.prefix, pattern), chain(wrap(g.mux, handler), g.middleware))
 }
 
 // HandleFunc registers an error-returning handler for a group path pattern.
 func (g *Group) HandleFunc(pattern string, handler HandlerFunc) {
 	if handler == nil {
-		panic("servemux: nil handler")
+		panic("errmux: nil handler")
 	}
-	g.mux.mux.Handle(joinPattern(g.prefix, pattern), chain(wrap(g.mux, handler), g.middleware))
+	g.Handle(pattern, handler)
+}
+
+// HandleHTTP registers a standard [http.Handler] for a group path pattern.
+func (g *Group) HandleHTTP(pattern string, handler http.Handler) {
+	if handler == nil {
+		panic("errmux: nil handler")
+	}
+	g.mux.mux.Handle(joinPattern(g.prefix, pattern), chain(handler, g.middleware))
 }
 
 // Get registers handler for GET requests matching pattern.
@@ -228,9 +255,9 @@ func (m *Router) errorHandler() ErrorHandler {
 	return DefaultErrorHandler
 }
 
-func wrap(m *Router, handler HandlerFunc) http.Handler {
+func wrap(m *Router, handler Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := handler(w, r); err != nil {
+		if err := handler.ServeHTTP(w, r); err != nil {
 			m.errorHandler()(w, r, err)
 		}
 	})
@@ -255,7 +282,7 @@ func joinPattern(prefix, pattern string) string {
 		path = pattern
 	}
 	if !strings.HasPrefix(path, "/") {
-		panic("servemux: group pattern path must start with /")
+		panic("errmux: group pattern path must start with /: " + pattern)
 	}
 	if ok {
 		return method + " " + joinPath(prefix, path)

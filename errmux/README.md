@@ -21,7 +21,7 @@ mux := errmux.New()
 mux.Use(logging)
 
 mux.Get("/users/{id}", getUser)
-mux.Handle("GET /static/", http.FileServer(http.Dir("static")))
+mux.HandleHTTP("GET /static/", http.FileServer(http.Dir("static")))
 
 mux.Group("/api", func(api *errmux.Group) {
 	api.Use(auth)
@@ -30,6 +30,9 @@ mux.Group("/api", func(api *errmux.Group) {
 
 log.Fatal(http.ListenAndServe(":8080", mux))
 ```
+
+`Handle` and `HandleFunc` accept error-returning handlers; a custom handler type
+can implement `errmux.Handler`. Standard `http.Handler` values use `HandleHTTP`.
 
 Middleware added to the router before `Group` is inherited by that group. A
 `Group` is not an `http.Handler`; serve the root `Router`. Group patterns are
