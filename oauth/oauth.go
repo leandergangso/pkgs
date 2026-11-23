@@ -35,38 +35,6 @@ type Provider struct {
 	Issuer   string // OIDC issuer URL; empty for plain OAuth2 providers.
 }
 
-// Common providers. Issuer is set only where OIDC discovery is available.
-var (
-	Google = Provider{
-		Name:     "google",
-		Endpoint: oauth2.Endpoint{AuthURL: "https://accounts.google.com/o/oauth2/auth", TokenURL: "https://oauth2.googleapis.com/token"},
-		Scopes:   []string{"openid", "email", "profile"},
-		Issuer:   "https://accounts.google.com",
-	}
-	GitHub = Provider{
-		Name:     "github",
-		Endpoint: oauth2.Endpoint{AuthURL: "https://github.com/login/oauth/authorize", TokenURL: "https://github.com/login/oauth/access_token"},
-		Scopes:   []string{"read:user", "user:email"},
-	}
-	Discord = Provider{
-		Name:     "discord",
-		Endpoint: oauth2.Endpoint{AuthURL: "https://discord.com/oauth2/authorize", TokenURL: "https://discord.com/api/oauth2/token"},
-		Scopes:   []string{"identify", "email"},
-	}
-	GitLab = Provider{
-		Name:     "gitlab",
-		Endpoint: oauth2.Endpoint{AuthURL: "https://gitlab.com/oauth/authorize", TokenURL: "https://gitlab.com/oauth/token"},
-		Scopes:   []string{"openid", "read_user"},
-		Issuer:   "https://gitlab.com",
-	}
-	Microsoft = Provider{
-		Name:     "microsoft",
-		Endpoint: oauth2.Endpoint{AuthURL: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize", TokenURL: "https://login.microsoftonline.com/common/oauth2/v2.0/token"},
-		Scopes:   []string{"openid", "profile", "email"},
-		Issuer:   "https://login.microsoftonline.com/common/v2.0",
-	}
-)
-
 // Custom returns a Provider for an arbitrary OAuth2 endpoint. Pass an issuer
 // only if the provider supports OIDC discovery.
 func Custom(name, authURL, tokenURL, issuer string, scopes ...string) Provider {

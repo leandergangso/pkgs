@@ -7,8 +7,16 @@ Every flow uses the authorization code grant with PKCE. OIDC providers also get
 a nonce. There is no implicit flow, and the package stores nothing: you keep the
 returned `Session` until the callback.
 
+Providers are defined by the caller, so nothing goes stale:
+
 ```go
-cfg := oauth.New(oauth.Google, clientID, clientSecret, redirectURL)
+p := oauth.Custom("google",
+	"https://accounts.google.com/o/oauth2/auth",
+	"https://oauth2.googleapis.com/token",
+	"https://accounts.google.com", // OIDC issuer; empty for plain OAuth2
+	"openid", "email", "profile",
+)
+cfg := oauth.New(p, clientID, clientSecret, redirectURL)
 
 url, session := cfg.Auth()
 // Store session keyed by session.State, then redirect to url.
@@ -38,15 +46,6 @@ if err != nil {
 
 The verifier checks signature, issuer, audience, and expiry, then compares the
 nonce. Token refresh and user-info calls are left to `x/oauth2`.
-
-## Providers
-
-Built in: `Google`, `GitHub`, `Discord`, `GitLab`, `Microsoft`. Only providers
-with OIDC discovery have an issuer set. Add any other provider with:
-
-```go
-p := oauth.Custom("my-provider", authURL, tokenURL, issuer, "openid", "email")
-```
 
 Providers that do not support PKCE generally ignore its parameters. Do not use
 a provider that rejects unknown authorization parameters.
